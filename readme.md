@@ -1,95 +1,39 @@
-# 🚀 Sonic Bundler
+# EVM PumpFun Smart Contract ⚡
+Building a high-performance implementation of pump.fun core functionalities for EVM-compatible blockchains. This project delivers an optimized fork designed for seamless integration across the Ethereum ecosystem.
 
-Sonic Bundler is a **gas-optimized Ethereum bundler** that efficiently batches and processes **UserOperations** in an ERC-4337-compatible smart contract. It handles **pending operations**, groups transactions into **batches**, and submits them to the **EntryPoint contract**.
+# 🔍 Overview
 
-## 📌 Features
+The EVM PumpFun Smart Contract provides a robust decentralized trading infrastructure with enterprise-grade reliability. Our implementation maintains the essential mechanics of the original protocol while leveraging EVM's advanced capabilities.
 
-- 🏗 **Batch Processing** – Collects multiple user operations and submits them in batches.  
-- 🔗 **ERC-4337 Account Abstraction** – Supports Ethereum's **EntryPoint contract** for smart accounts.  
-- ⚡ **Optimized Gas Usage** – Reduces transaction costs with efficient batching.  
-- ⏳ **Automated Processing** – Periodically processes pending operations and cleans up expired batches.  
-- 🔄 **Health Check** – Monitors the blockchain connection and EntryPoint contract availability.  
+## ✨ Key Features
+- **Advanced AMM Engine**: Optimized automated market making with enhanced efficiency
+- **Dynamic Liquidity Management**: Sophisticated pool management with minimal slippage
+- **Precision Price Discovery**: High-accuracy price oracle implementation
+- **Streamlined Trading Pairs**: Simplified creation and management process
+- **Transparent Fee Distribution**: Equitable reward system for ecosystem participants
 
----
+## 🛠️ Technical Specifications
 
-## 📥 Installation
+This implementation delivers significant improvements through:
 
-### **1️⃣ Clone the Repository**
-```bash
-git clone https://github.com/murathanje/sonic-bundler-bot.git
-cd sonic-bundler-bot
-```
+- **EVM Optimization**: Contract design specifically tuned for Ethereum Virtual Machine execution
+- **Cross-Chain Compatibility**: Seamless deployment across multiple EVM networks
+- **Wallet Integration**: Complete support for standard EVM wallets and interfaces
+- **Gas Efficiency**: Reduced transaction costs through optimized contract architecture
 
-### **2️⃣ Install Dependencies**
-```bash
-npm install
-```
+## 📈 Development Status
 
-### **3️⃣ Configure Environment Variables**
-Create a `.env` file and set up the required configurations:
-```bash
-RPC_URL=https://your_rpc_url
-PRIVATE_KEY=your_private_key
-ENTRYPOINT_ADDRESS=0xEntryPointAddress
-DEFAULT_GAS_LIMIT=1000000
-MAX_BATCH_SIZE=5
-BATCH_TIMEOUT=60000
-```
-
-## 🚀 Usage
-
-### Add a User Operation
-```typescript
-const userOp: UserOperation = { /* Define UserOperation */ };
-const userOpHash = await bundlerService.addUserOperation(userOp);
-console.log("User Operation added:", userOpHash);
-```
-Queues a UserOperation for processing.
-Can optionally be added to a batch.
-
-### Submit a Batch of Transactions
-```typescript
-const txHash = await bundlerService.submitBatch("batch123");
-console.log("Batch submitted with Tx:", txHash);
-```
-Retrieves all pending operations in a batch and submits them to the EntryPoint contract.
-
-### Start Automated Processing
-```typescript
-bundlerService.startProcessing();
-```
-Runs a loop to process transactions every 10 seconds and clean stale batches every 60 seconds.
-
-### Check Service Health
-```typescript
-const isHealthy = await bundlerService.checkHealth();
-console.log("Bundler service status:", isHealthy ? "✅ Online" : "❌ Offline");
-```
-Ensures the blockchain connection is active and the EntryPoint contract exists.
-
-## 🛠 API Reference
-`initializeProvider()`
-Initializes the Ethereum provider, connects the wallet, and verifies the EntryPoint contract.
-
-`addUserOperation(userOp: UserOperation, batchId?: string): Promise<string>`
-Adds a UserOperation to the queue or a specific batch.
-
-`submitBatch(batchId: string): Promise<string>`
-Processes and submits all transactions in a given batch.
-
-`processPendingOps(): Promise<void>`
-Automatically processes pending operations in batches.
-
-`cleanupOldBatches(): void`
-Removes expired transaction batches to free memory.
-
-`startProcessing(): void`
-Starts an interval loop to process transactions and clean old batches.
-
-`checkHealth(): Promise<boolean>`
-Checks if the RPC connection and EntryPoint contract are working.
+The project maintains active development with ongoing enhancements to core functionality. Future releases will introduce expanded features and further optimization.
 
 ## 📞 Contact
-If you have any questions, feel free to reach out:
 
-📧 Telegram: [T-rustdev](https://github.com/T_rustdev)
+[TG](https://t.me/OnChainMee) 
+[X](https://x.com/OnChainMee) 
+
+</br>
+Feel free to reach out for implementation assistance or integration support.
+
+## License 📝
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
