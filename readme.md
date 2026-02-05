@@ -1,6 +1,28 @@
 # EVM PumpFun Smart Contract ⚡
 
-High-performance implementation of pump.fun-style bonding-curve and AMM mechanics for EVM chains. Deployable on Base, Ethereum, and other EVM-compatible networks.
+**Version 2** — High-performance implementation of pump.fun-style bonding-curve and AMM mechanics for EVM chains. Deployable on Base, Ethereum, and other EVM-compatible networks.
+
+---
+
+## Version history
+
+### v1 (public)
+
+- Bonding-curve engine (PumpFun) with create pool, buy, sell, owner withdraw.
+- TokenFactory: deploy ERC20 + create pool in one tx; owner-only pool address.
+- AMM: PancakeFactory, PancakePair, Pair, Router (add/remove liquidity, swap, referral fee).
+- Security: ReentrancyGuard, CEI in sell, owner set in constructor, excess ETH refund on createPool.
+- Base + Base Sepolia in Hardhat config; optimizer + viaIR.
+
+### v2 (private)
+
+| Area | Improvement |
+|------|-------------|
+| **PumpFun** | View helpers: `getBuyQuote(token, tokenAmount)`, `getSellQuote(token, tokenAmount)`, `getTokenAmountForEth(token, ethAmount)` for frontends. Getters: `getOwner()`, `getFeeRecipient()`, `getFeeBasisPoint()`, `getMcapLimit()`, `isPoolComplete(token)`. Optional: `pause` / `unpause` for emergency halt. |
+| **Router** | Allow `referree == address(0)` so swaps work without a referrer. Add `deadline` to swap functions to limit front-run risk. Admin: `setReferralFee` (and optionally owner). |
+| **Pair** | Restrict `mint`, `burn`, `swap` to Router (or single core) so only the protocol can update reserves. |
+| **TokenFactory** | `getTokenCount()`; `transferOwnership(address)` or `setOwner` for ownership transfer. |
+| **Router** | `getAmountsIn(token, weth, amountOut)` for “how much in to get X out” quotes. |
 
 ---
 
@@ -25,14 +47,14 @@ The system has two phases per token:
 
 | Contract | Role |
 |----------|------|
-| **PumpFun** | Bonding-curve engine: `createPool`, `buy`, `sell`, `withdraw` (owner). Constant-product pricing with configurable virtual/real reserves, fee (basis points), and create fee. |
-| **TokenFactory** | Deploys ERC20 (name/symbol, fixed supply), approves PumpFun, pays create fee, and calls `createPool` in one tx. Owner-only `setPoolAddress`. |
+| **PumpFun** | Bonding-curve: `createPool`, `buy`, `sell`, `withdraw` (owner). Quotes: `getBuyQuote`, `getSellQuote`, `getTokenAmountForEth`. Getters: `getOwner`, `getFeeRecipient`, `getFeeBasisPoint`, `getMcapLimit`, `getTokenTotalSupply`, `getInitialVirtualReserves`, `isPoolComplete`. Emergency: `pause` / `unpause`. |
+| **TokenFactory** | Deploys ERC20 + `createPool` in one tx. Owner-only `setPoolAddress`. v2: `getTokenCount()`, `transferOwnership(address)`. |
 | **Token** | Standard ERC20 (OpenZeppelin); minted to creator with fixed total supply. |
-| **PancakeFactory** | UniswapV2-style factory: `createPair(tokenA, tokenB)` via CREATE2, `feeTo`, `txFee`, `getPair`. Implements `IFactory` for Router. |
+| **PancakeFactory** | UniswapV2-style factory: `createPair(tokenA, tokenB)` via CREATE2, `feeTo`, `txFee`, `getPair`. Implements `IFactory`. |
 | **PancakePair** | Minimal pair: `initialize(token0, token1)`; holds pair state for Router. |
-| **Pair** | Full AMM pair used with Router: reserves, `mint`/`burn`/`swap`, `approval`, `transferETH`, `getReserves`, `kLast`. |
-| **Router** | Liquidity and swap operations: `addLiquidityETH`, `removeLiquidityETH`, `swapTokensForETH`, `swapETHForTokens`, `getAmountsOut`; uses `IFactory` and referral/tx fee. |
-| **Factory.sol** | Interface `IFactory`: `getPair`, `feeTo`, `txFee` (used by Router). |
+| **Pair** | Full AMM pair: `mint`/`burn`/`swap` restricted to `core` (set by factory via `setCore`). `approval`, `transferETH`, `getReserves`, `kLast`, `core()`. |
+| **Router** | Liquidity: `addLiquidityETH`, `removeLiquidityETH`. Swaps: `swapTokensForETH(..., referree, deadline)`, `swapETHForTokens(..., referree, deadline)`; referree may be `address(0)`. Quotes: `getAmountsOut`, `getAmountsIn`. Owner-only `setReferralFee`. |
+| **Factory.sol** | Interface `IFactory`: `getPair`, `feeTo`, `txFee`. |
 
 ---
 
@@ -43,7 +65,7 @@ The system has two phases per token:
 - **Reserves**: Per-token curve state: `virtualTokenReserves`, `virtualEthReserves`, `realTokenReserves`, `realEthReserves`, `tokenTotalSupply`, `mcapLimit`, `complete`.
 - **Completion**: Curve marks `complete` when mcap exceeds `mcapLimit` or real token reserve percentage falls below 20%. Only then can owner call `withdraw(token)` to pull real ETH and tokens.
 - **Fees**: Create fee (flat ETH) and trading fee (basis points) sent to `feeRecipient`. Excess ETH in `createPool` is refunded to caller.
-- **Security**: `ReentrancyGuard` on pool creation and trading; CEI in `sell`; owner set in constructor; no external calls before state updates in critical paths.
+- **Security**: `ReentrancyGuard` on pool creation and trading; CEI in `sell`; owner set in constructor; no external calls before state updates in critical paths. v2: `pause`/`unpause` for emergency halt.
 
 ---
 
@@ -123,8 +145,10 @@ npx hardhat verify --network base <DEPLOYED_ADDRESS> <CONSTRUCTOR_ARGS>
 ## Configuration
 
 - **PumpFun constructor**: `feeRecipient`, `createFee` (wei), `feeBasisPoint` (e.g. 100 = 1%).
-- **TokenFactory**: Owner must call `setPoolAddress(pumpFunAddress)` after deployment.
+- **TokenFactory**: Owner must call `setPoolAddress(pumpFunAddress)` after deployment. Use `transferOwnership` to change owner.
 - **PancakeFactory**: `feeToSetter` in constructor; then `setFeeTo`, `setTxFee`, `setFeeToSetter` as needed for Router compatibility.
+- **Pair (v2)**: After the factory creates a pair, it must call `pair.setCore(routerAddress)` once so the Router can call `mint`/`burn`/`swap`. Only the factory can call `setCore`, and only before a core is set.
+- **Router**: Swaps require a `deadline` (e.g. `block.timestamp + 300`). Use `address(0)` as `referree` when no referrer.
 
 ---
 
