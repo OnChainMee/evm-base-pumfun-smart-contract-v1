@@ -12,11 +12,11 @@ The system has two phases per token:
 2. **Graduation** — Completed curves can be withdrawn by the protocol owner; liquidity can be moved to a Uniswap-style AMM (Router + Factory/Pair) for continued trading.
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   TokenFactory  │────▶│     PumpFun      │     │ PancakeFactory  │
-│ (deploy ERC20 + │     │ (bonding curve   │     │ + Router + Pair  │
-│  create pool)   │     │  buy/sell/withdraw)     │ (AMM post-grad)  │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
+┌─────────────────┐      ┌───────────────────┐     ┌─────────────────┐
+│   TokenFactory  │────> │      PumpFun      │────>│ PancakeFactory  │
+│ (deploy ERC20 + │      │  (bonding curve   │     │ + Router + Pair │
+│  create pool)   │      │ buy/sell/withdraw)│     │ (AMM post-grad) │
+└─────────────────┘      └───────────────────┘     └─────────────────┘
 ```
 
 ---
