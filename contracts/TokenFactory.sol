@@ -10,13 +10,18 @@ interface IPumpFun {
     ) external payable;
     function getCreateFee() external view returns(uint256);
 }
-contract TokenFactory  {
+contract TokenFactory {
     uint256 public currentTokenIndex = 0;
     uint256 public immutable INITIAL_AMOUNT = 10**27;
 
     address public contractAddress;
-    address public taxAddress = 0x044421aAbF1c584CD594F9C10B0BbC98546CF8bc;
-    
+    address public owner;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
+        _;
+    }
+
     struct TokenStructure {
         address tokenAddress;
         string tokenName;
@@ -26,7 +31,9 @@ contract TokenFactory  {
 
     TokenStructure[] public tokens;
 
-    constructor () {}
+    constructor() {
+        owner = msg.sender;
+    }
 
     function deployERC20Token (
         string memory name,
@@ -49,8 +56,8 @@ contract TokenFactory  {
         IPumpFun(contractAddress).createPool{value: balance}(address(token), INITIAL_AMOUNT);
     }
 
-    function setPoolAddress (address newAddr) public  {
+    function setPoolAddress(address newAddr) external onlyOwner {
         require(newAddr != address(0), "Non zero Address");
         contractAddress = newAddr;
-    } 
+    }
 }

@@ -1,27 +1,29 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/IPancakePair.sol";
 import "./PancakePair.sol";
+import "./Factory.sol";
 
-contract PancakeFactory is Ownable, ReentrancyGuard {
+contract PancakeFactory is Ownable, ReentrancyGuard, IFactory {
     // Events
     event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
 
     // State variables
     mapping(address => mapping(address => address)) public getPair;
     address[] public allPairs;
-    
+
     // Protocol fee settings
     address public feeTo;
     address public feeToSetter;
-    
+    uint256 public txFee; // basis points or percent; for IFactory compatibility with Router
+
     // INIT_CODE_PAIR_HASH is used for pair address creation
     bytes32 public constant INIT_CODE_PAIR_HASH = keccak256(abi.encodePacked(type(PancakePair).creationCode));
 
-    constructor(address _feeToSetter) {
+    constructor(address _feeToSetter) Ownable(msg.sender) {
         feeToSetter = _feeToSetter;
     }
 
@@ -64,5 +66,12 @@ contract PancakeFactory is Ownable, ReentrancyGuard {
     function setFeeToSetter(address _feeToSetter) external {
         require(msg.sender == feeToSetter, "PancakeFactory: FORBIDDEN");
         feeToSetter = _feeToSetter;
+    }
+
+    // Sets the transaction fee (e.g. 0-100 for percent). For IFactory / Router compatibility.
+    function setTxFee(uint256 _txFee) external {
+        require(msg.sender == feeToSetter, "PancakeFactory: FORBIDDEN");
+        require(_txFee <= 100, "PancakeFactory: FEE_TOO_HIGH");
+        txFee = _txFee;
     }
 } 

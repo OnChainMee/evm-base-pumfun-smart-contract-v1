@@ -3,13 +3,12 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./Factory.sol";
 import "./Pair.sol";
-import "./ERC20.sol";
 
 contract Router is ReentrancyGuard {
-    using SafeMath for uint256;
 
     address private _factory;
 
@@ -49,30 +48,28 @@ contract Router is ReentrancyGuard {
     function _getAmountsOut(address token, address weth, uint256 amountIn) private view returns (uint256 _amountOut) {
         require(token != address(0), "Zero addresses are not allowed.");
 
-        Factory factory_ = Factory(_factory);
+        IFactory factory_ = IFactory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
 
         Pair _pair = Pair(payable(pair));
 
-        (uint256 reserveA, ,uint256 _reserveB) = _pair.getReserves();
+        (uint256 reserveA, , uint256 _reserveB) = _pair.getReserves();
 
         uint256 k = _pair.kLast();
 
         uint256 amountOut;
 
-        if(weth == _WETH) {
-            uint256 newReserveB = _reserveB.add(amountIn);
-
-            uint256 newReserveA = k.div(newReserveB, "Division failed");
-
-            amountOut = reserveA.sub(newReserveA, "Subtraction failed.");
+        if (weth == _WETH) {
+            uint256 newReserveB = _reserveB + amountIn;
+            require(newReserveB > 0, "Division by zero");
+            uint256 newReserveA = k / newReserveB;
+            amountOut = reserveA - newReserveA;
         } else {
-            uint256 newReserveA = reserveA.add(amountIn);
-
-            uint256 newReserveB = k.div(newReserveA, "Division failed");
-
-            amountOut = _reserveB.sub(newReserveB, "Subtraction failed.");
+            uint256 newReserveA = reserveA + amountIn;
+            require(newReserveA > 0, "Division by zero");
+            uint256 newReserveB = k / newReserveA;
+            amountOut = _reserveB - newReserveB;
         }
 
         return amountOut;
@@ -87,13 +84,13 @@ contract Router is ReentrancyGuard {
     function _addLiquidityETH(address token, uint256 amountToken, uint256 amountETH) private returns (uint256, uint256) {
         require(token != address(0), "Zero addresses are not allowed.");
 
-        Factory factory_ = Factory(_factory);
+        IFactory factory_ = IFactory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
 
         Pair _pair = Pair(payable(pair));
 
-        ERC20 token_ = ERC20(token);
+        IERC20 token_ = IERC20(token);
 
         bool os = transferETH(pair, amountETH);
         require(os, "Transfer of ETH to pair failed.");
@@ -118,7 +115,7 @@ contract Router is ReentrancyGuard {
         require(token != address(0), "Zero addresses are not allowed.");
         require(to != address(0), "Zero addresses are not allowed.");
 
-        Factory factory_ = Factory(_factory);
+        IFactory factory_ = IFactory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
 
@@ -126,7 +123,7 @@ contract Router is ReentrancyGuard {
 
         (uint256 reserveA, , ) = _pair.getReserves();
 
-        ERC20 token_ = ERC20(token);
+        IERC20 token_ = IERC20(token);
 
         uint256 amountETH  = (liquidity * _pair.balance()) / 100;
 
@@ -157,20 +154,20 @@ contract Router is ReentrancyGuard {
         require(to != address(0), "Zero addresses are not allowed.");
         require(referree != address(0), "Zero addresses are not allowed.");
 
-        Factory factory_ = Factory(_factory);
+        IFactory factory_ = IFactory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
 
         Pair _pair = Pair(payable(pair));
 
-        ERC20 token_ = ERC20(token);
+        IERC20 token_ = IERC20(token);
 
         uint256 amountOut = _getAmountsOut(token, address(0), amountIn);
 
         bool os = token_.transferFrom(to, pair, amountIn);
         require(os, "Transfer of token to pair failed");
 
-        uint fee = factory_.txFee();
+        uint256 fee = factory_.txFee();
         uint256 txFee = (fee * amountOut) / 100;
 
         uint256 _amount;
@@ -206,20 +203,20 @@ contract Router is ReentrancyGuard {
 
         uint256 amountIn = msg.value;
 
-        Factory factory_ = Factory(_factory);
+        IFactory factory_ = IFactory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
 
         Pair _pair = Pair(payable(pair));
 
-        ERC20 token_ = ERC20(token);
+        IERC20 token_ = IERC20(token);
 
         uint256 amountOut = _getAmountsOut(token, _WETH, amountIn);
 
         bool approved = _pair.approval(address(this), token, amountOut);
         require(approved, "Not Approved.");
 
-        uint fee = factory_.txFee();
+        uint256 fee = factory_.txFee();
         uint256 txFee = (fee * amountIn) / 100;
 
         uint256 _amount;

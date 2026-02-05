@@ -81,9 +81,10 @@ contract PumpFun is ReentrancyGuard {
 
     constructor(
         address newAddr,
-        uint256 feeAmt, 
+        uint256 feeAmt,
         uint256 basisFee
-    ){
+    ) {
+        owner = msg.sender;
         feeRecipient = newAddr;
         createFee = feeAmt;
         feeBasisPoint = basisFee;
@@ -96,18 +97,16 @@ contract PumpFun is ReentrancyGuard {
     function createPool(
         address token,
         uint256 amount
-    ) payable public {
+    ) payable public nonReentrant {
         require(amount > 0, "CreatePool: Larger than Zero");
         require(feeRecipient != address(0), "CreatePool: Non Zero Address");
         require(msg.value >= createFee, "CreatePool: Value Amount");
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
 
-        payable(feeRecipient).transfer(createFee);
-
-        bondingCurve[token] = Token ({
+        bondingCurve[token] = Token({
             tokenMint: token,
-            virtualTokenReserves: initialVirtualTokenReserves, 
+            virtualTokenReserves: initialVirtualTokenReserves,
             virtualEthReserves: initialVirtualEthReserves,
             realTokenReserves: amount,
             realEthReserves: 0,
@@ -116,15 +115,21 @@ contract PumpFun is ReentrancyGuard {
             complete: false
         });
 
-        emit CreatePool(token, msg.sender);
+        payable(feeRecipient).transfer(createFee);
 
+        if (msg.value > createFee) {
+            (bool sent, ) = payable(msg.sender).call{value: msg.value - createFee}("");
+            require(sent, "CreatePool: refund failed");
+        }
+
+        emit CreatePool(token, msg.sender);
     }
 
     function buy(
         address token,
         uint256 amount,
         uint256 maxEthCost
-    ) payable public {
+    ) payable public nonReentrant {
         Token storage tokenCurve = bondingCurve[token];
         require(amount > 0, "Should Larger than zero");
         require(tokenCurve.complete == false, "Should Not Completed");
@@ -168,7 +173,7 @@ contract PumpFun is ReentrancyGuard {
         address token,
         uint256 amount,
         uint256 minEthOutput
-    ) public {
+    ) public nonReentrant {
         Token storage tokenCurve = bondingCurve[token];
         require(tokenCurve.complete == false, "Should Not Completed");
         require(amount > 0, "Should Larger than zero");
@@ -181,19 +186,20 @@ contract PumpFun is ReentrancyGuard {
         require(ethCost >= minEthOutput, "Should Be Larger than Min");
 
         uint256 feeAmount = feeBasisPoint * ethCost / 10000;
+        uint256 toUser = ethCost - feeAmount;
 
-        payable(feeRecipient).transfer(feeAmount);
-        payable(msg.sender).transfer(ethCost - feeAmount);
-
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
-
+        // CEI: update state before external calls
         tokenCurve.realTokenReserves += amount;
         tokenCurve.virtualTokenReserves += amount;
         tokenCurve.virtualEthReserves -= ethCost;
         tokenCurve.realEthReserves -= ethCost;
 
-        emit Trade(token, ethCost, amount, false, msg.sender, block.timestamp, tokenCurve.virtualEthReserves, tokenCurve.virtualTokenReserves);
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
 
+        payable(feeRecipient).transfer(feeAmount);
+        payable(msg.sender).transfer(toUser);
+
+        emit Trade(token, ethCost, amount, false, msg.sender, block.timestamp, tokenCurve.virtualEthReserves, tokenCurve.virtualTokenReserves);
     }
 
     function withdraw(

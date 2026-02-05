@@ -3,8 +3,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
-import "./ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Pair is ReentrancyGuard {
     receive() external payable {}
@@ -104,7 +103,7 @@ contract Pair is ReentrancyGuard {
         require(_user != address(0), "Zero addresses are not allowed.");
         require(_token != address(0), "Zero addresses are not allowed.");
 
-        ERC20 token_ = ERC20(_token);
+        IERC20 token_ = IERC20(_token);
 
         token_.approve(_user, amount);
 
